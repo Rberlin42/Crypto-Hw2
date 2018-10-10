@@ -3,6 +3,7 @@ import socket
 import random
 import toy_des as des
 
+#Shared global parameters for Diffie-Hellman
 Q = 1021
 ALPHA = 999
 
@@ -127,8 +128,51 @@ def recvFile(key):
 	fd.close()
 	print("Received file:", filename.decode())
 
+#Computes the secret key with the KDC using diffie-hellman
+def diffieHellman():
+	#Initiate diffie Hellman with server
+	sock.sendall(ID.encode())
+	ack = sock.recv(64)
+	if ack != b"ACK":
+		print(ack)
+		exit()
+	sock.sendall(b"DF")
+	ack = sock.recv(64)
+	if ack != b"ACK":
+		print(ack)
+		exit()
+
+	#generate our public key
+	secret = int(random.random()*Q)
+	public  = (ALPHA**secret) % Q
+
+	#receive kdc's public key and send ours
+	sock.sendall(str(public).encode())
+	kdc_public = int(sock.recv(4))
+
+	#calculate the session key
+	session_key = (kdc_public**secret) % Q
+
+	print("Secret key is", session_key)
+	return session_key
 
 ###MAIN###
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-getCommand()
+
+#get ID from user
+ID = input("Enter ID: ")
+if len(ID) > 1:
+	print("ID must have length 1")
+	exit()
+
+#Compute secret key with KDC
+#get ip and port of kdc
+kdc_ip = input("Enter KDC IP: ")
+kdc_port = int(input("Enter KDC Port: "))
+sock.connect((kdc_ip, socket.htons(kdc_port)))
+secret_key = diffieHellman()
+sock.close()
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#getCommand()
 sock.close()
