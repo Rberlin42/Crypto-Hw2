@@ -37,11 +37,7 @@ def checkKey(key):
 
 #read user input and set up connections
 def getCommand():
-	#Prompt for key
-	key = input("10-bit Key: ")
-	if not checkKey(key):
-		print("invalid key")
-		return
+
 	#Prompt for command
 	command = input("SEND or RECEIVE? ")
 
@@ -51,6 +47,12 @@ def getCommand():
 		sock.bind(("", socket.htons(port)))
 		sock.listen(1)
 		print("Listening for connections on", port)
+		#wait for connection
+		fd, addr = sock.accept()
+		print("Conncetion received from", addr)
+
+		###GET SESSION KEY WITH NS***
+		
 		recvFile(key)
 
 	elif command == "SEND":
@@ -72,6 +74,13 @@ def getCommand():
 		except:
 			print("Unable to connect")
 			return
+
+		###GET SESSION KEY WITH NS***
+		#Create a new socket to talk with the KDC
+		kdc_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		sock.connect((kdc_ip, socket.htons(kdc_port)))
+		
+
 		#send the file
 		sendFile(file, key)
 
@@ -104,9 +113,6 @@ def sendFile(file, key):
 #listens on a port for a connection
 #receives a file, decrypts and saves.
 def recvFile(key):
-	#wait for connection
-	fd, addr = sock.accept()
-	print("Conncetion received from", addr)
 
 	#receive first packet (filename)
 	cypher = fd.recv(1024)

@@ -5,6 +5,7 @@ import random
 import toy_des as des
 
 #Shared global parameters for Diffie-Hellman
+#capped at 1021 to be compatable with 10-bit key required for toy_des
 Q = 1021
 ALPHA = 999
 
@@ -40,13 +41,14 @@ def handle_connection(fd, addr):
 	if command == b"DF":
 		fd.sendall(b"ACK")
 		diffieHellman(fd, cli_id)
-	elif command == b"GETKEY":
+	elif command == b"NS":
 		fd.sendall(b"ACK")
-		createSessionKey(fd, addr, cli_id)
+		NS(fd, cli_id)
 	else:
 		fd.sendall(b"ERROR: Invalid Command")
 	fd.close()
 
+#Creates a key for the connected client using diffie-hellman
 def diffieHellman(fd, cli_id):
 	print("Computing diffie-hellman with", cli_id)
 
@@ -66,7 +68,37 @@ def diffieHellman(fd, cli_id):
 
 	print("Secret key for", cli_id, "is", session_key)
 
+#Send the client an encryped session key according to the NS protocol
+def NS(fd, cli_id):
+	#Receive and parse first packet
+	packet = fd.recv(10).decode()
+	if cli_id != packed[0]:
+		print("Error: incorrect id")
+		exit()
+	cli_id2 = packet[1]
+	N1 = packet[2:]
 
+	print("Generating session key for", cli_id, "and", cli_id2)
+
+	#randomly generate session key
+	session_key = int(random.random()*Q)
+	print("Key is", session_key)
+
+	#get secret keys for both users
+	Ka = getBits(users[cli_id])
+	Kb = getBits(users[cli_id2])
+	#make sure they are both 10 bits
+	while len(Ka) < 10: Ka = '0' + Ka
+	while len(Kb) < 10: Kb = '0' + Kb
+
+	#create and encrypt string to send back
+	str1 = getBits(str(session_key) + cli_id)
+	encryped_str1 = des.encrypt(str1, Kb)
+	str2 = getBits(str(session_key) + cli_id2 + N1) + encryped_str1
+	encrypted_str2 = des.encrypt(str2, Ka)
+
+	#Send key back to client
+	fd.sendall(getBytes(encrypted_str2))
 	
 
 
