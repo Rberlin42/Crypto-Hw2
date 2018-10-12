@@ -10,21 +10,25 @@ Q = 1021
 ALPHA = 999
 
 #convert bytes to a string of bits
-def getBits(byte):
+def getBits(byte, length=None):
 	hexi = byte.hex()
 	binary = bin(int(hexi, 16))[2:]
 	#add leading 0s
-	while len(binary) < len(byte)*8:
+	if length == None: length = len(byte) * 8
+	while len(binary) < length:
 		binary = "0" + binary
-	return binary
+	return binary[:length]
 
 #convert a string of bits to bytes
-def getBytes(binary):
+def getBytes(binary, length=None):
 	hexi = hex(int("0b"+binary, 2))[2:]
+	if len(hexi) % 2 == 1: hexi = "0" + hexi
+	byte = bytes.fromhex(hexi)
 	#add leading 0s
-	while len(hexi) < len(binary)/4:
-		hexi = "0" + hexi
-	return bytes.fromhex(hexi)
+	if length == None: length = len(binary) // 4
+	while len(byte) < length:
+		byte = bytes.fromhex("00") + byte
+	return byte[:length]
 
 #Function for threads to handle connections
 def handle_connection(fd, addr):
@@ -37,7 +41,7 @@ def handle_connection(fd, addr):
 	#get the command sent and check if it's valid
 	# DF for diffie-hellman
 	# GETKEY to get a session key
-	command = fd.recv(6)
+	command = fd.recv(2)
 	if command == b"DF":
 		fd.sendall(b"ACK")
 		diffieHellman(fd, cli_id)
@@ -71,12 +75,12 @@ def diffieHellman(fd, cli_id):
 #Send the client an encryped session key according to the NS protocol
 def NS(fd, cli_id):
 	#Receive and parse first packet
-	packet = fd.recv(10).decode()
-	if cli_id != packed[0]:
+	packet = fd.recv(4)
+	if cli_id != packet[:1].decode():
 		print("Error: incorrect id")
 		exit()
-	cli_id2 = packet[1]
-	N1 = packet[2:]
+	cli_id2 = packet[1:2].decode()
+	N1 = int.from_bytes(packet[2:], byteorder="big")
 
 	print("Generating session key for", cli_id, "and", cli_id2)
 
@@ -84,21 +88,18 @@ def NS(fd, cli_id):
 	session_key = int(random.random()*Q)
 	print("Key is", session_key)
 
-	#get secret keys for both users
-	Ka = getBits(users[cli_id])
-	Kb = getBits(users[cli_id2])
-	#make sure they are both 10 bits
-	while len(Ka) < 10: Ka = '0' + Ka
-	while len(Kb) < 10: Kb = '0' + Kb
+	#git bit forms of secret keys
+	Ka = getBits(users[cli_id].to_bytes(2, byteorder="big"), 10)
+	Kb = getBits(users[cli_id2].to_bytes(2, byteorder="big"), 10)
 
 	#create and encrypt string to send back
-	str1 = getBits(str(session_key) + cli_id)
+	str1 = getBits(session_key.to_bytes(2, byteorder="big") + cli_id.encode())
 	encryped_str1 = des.encrypt(str1, Kb)
-	str2 = getBits(str(session_key) + cli_id2 + N1) + encryped_str1
+	str2 = getBits(session_key.to_bytes(2, byteorder="big") + cli_id2.encode() + N1.to_bytes(2, byteorder="big")) + encryped_str1
 	encrypted_str2 = des.encrypt(str2, Ka)
 
 	#Send key back to client
-	fd.sendall(getBytes(encrypted_str2))
+	fd.sendall(getBytes(encrypted_str2, 8))
 	
 
 
