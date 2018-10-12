@@ -51,7 +51,17 @@ The sender initiates the connection by sending its ID, and, after receiving an a
 server know that it wants to compute a key with NS.  The server will pick a key and give it to the sender, who will then share it with the
 receiver.  This transaction is done in the following steps:
 1. A->KDC: ID<sub>A</sub> \|\| ID<sub>B</sub> \|\| N<sub>1</sub>
+	+ KDC loads the the secret keys of A and B, generates a session key K<sub>s</sub>
+	+ KDC then creats and encrypts strings using toy des and both secret keys, and sends back to A
 2. KDC->A: E<sub>K<sub>A</sub></sub>[K<sub>s</sub> \|\| ID<sub>B</sub> \|\| N<sub>1</sub> E<sub>K<sub>B</sub></sub>[K<sub>s</sub> \|\| ID<sub>A</sub>]]
+	+ A receives the and decrypts string from the KDC using its secret key
+	+ It checks that the IDs and Nonce is still intact
+	+ It then sends the key to B that is encrypted with B's secret key
 3. A->B: E<sub>K<sub>B</sub></sub>[K<sub>s</sub> \|\| ID<sub>A</sub>]
+	+ B receives the packet and decrypts using its secret key to obtain the session key
+	+ It then picks a nonce N<sub>2</sub> to test the new session key.
+	+ It picks the nonce and encrypts it with the session key, and sends back to A
 4. B->A: E<sub>K<sub>s</sub></sub>[N<sub>2</sub>]
+	+ A will decrypt N<sub>2</sub> and perform a simple function on it and send back to B
 5. A->B: E<sub>K<sub>s</sub></sub>[f(N<sub>2</sub>)], where f is f(x) = x - 1
+	+ B decrypts the nonce and checks that it is what it is expecting to make sure that the key is working.
