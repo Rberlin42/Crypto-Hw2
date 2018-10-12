@@ -246,7 +246,7 @@ def diffieHellman():
 	if ack != b"ACK":
 		print(ack)
 		exit()
-	sock.sendall(b"DF")
+	sock.sendall(b"DH")
 	ack = sock.recv(64)
 	if ack != b"ACK":
 		print(ack)

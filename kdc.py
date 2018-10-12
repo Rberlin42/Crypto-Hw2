@@ -42,7 +42,7 @@ def handle_connection(fd, addr):
 	# DF for diffie-hellman
 	# GETKEY to get a session key
 	command = fd.recv(2)
-	if command == b"DF":
+	if command == b"DH":
 		fd.sendall(b"ACK")
 		diffieHellman(fd, cli_id)
 	elif command == b"NS":
