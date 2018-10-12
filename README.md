@@ -51,4 +51,7 @@ The sender initiates the connection by sending its ID, and, after receiving an a
 server know that it wants to compute a key with NS.  The server will pick a key and give it to the sender, who will then share it with the
 receiver.  This transaction is done in the following steps:
 1. A->KDC: ID<sub>A</sub> \|\| ID<sub>B</sub> \|\| N<sub>1</sub>
-2. KDC->A: E<sub>K<sub>A</sub></sub>[K<sub>s</sub> \|\| ID<sub>B</sub> \|\| N<sub>1</sub>]
+2. KDC->A: E<sub>K<sub>A</sub></sub>[K<sub>s</sub> \|\| ID<sub>B</sub> \|\| N<sub>1</sub> E<sub>K<sub>B</sub></sub>[K<sub>s</sub> \|\| ID<sub>A</sub>]]
+3. A->B: E<sub>K<sub>B</sub></sub>[K<sub>s</sub> \|\| ID<sub>A</sub>]
+4. B->A: E<sub>K<sub>s</sub></sub>[N<sub>2</sub>]
+5. A->B: E<sub>K<sub>s</sub></sub>[f(N<sub>2</sub>)], where f is f(x) = x - 1
